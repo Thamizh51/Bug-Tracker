@@ -29,6 +29,7 @@ class BugController extends Controller
 
     public function store(Request $request, Project $project)
     {
+
         if (Auth::user()->role !== 'tester') {
             return response()->json([
                 'message' => 'Only testers can create bugs.',
@@ -107,7 +108,7 @@ class BugController extends Controller
 
         $bug = Bug::create([
             'project_id' => $project->id,
-            'reported_by' => Auth::id(),
+            'reported_by' => Auth::user()->name,
 
             // Tester submits only bug details
             'assigned_to' => $validated['assigned_to'] ?? null,

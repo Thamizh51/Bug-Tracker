@@ -17,9 +17,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             // Tester who reported the bug
-            $table->foreignId('reported_by')
-                ->constrained('users')
-                ->cascadeOnDelete();
+            $table->string('reported_by');
 
             // Developer name
             $table->string('assigned_to')->nullable();
