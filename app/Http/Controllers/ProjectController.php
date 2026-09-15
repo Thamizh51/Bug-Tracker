@@ -53,6 +53,34 @@ class ProjectController extends Controller
             'project' => $project,
         ], 201);
     }
+    /**
+     * Update project status (Admin only)
+     */
+    public function updateStatus(Request $request, Project $project)
+    {
+        // Only admin can update project status
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin can update project status'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                Rule::in(['active', 'inactive']),
+            ],
+        ]);
+
+        $project->update([
+            'status' => $validated['status'],
+        ]);
+
+        return response()->json([
+            'message' => 'Project status updated successfully',
+            'project' => $project,
+        ]);
+    }
 
     /**
      * Update an existing project

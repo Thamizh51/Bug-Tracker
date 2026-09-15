@@ -29,6 +29,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Update an existing project
     Route::put('/projects/{project}', [ProjectController::class, 'update']);
 
+    // Update project status (Admin only)
+    Route::patch('/projects/{project}/status',[ProjectController::class, 'updateStatus']);
+
     // Delete a project
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
 
@@ -54,5 +57,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tester deletes a bug
     Route::delete('/bugs/{bug}', [BugController::class, 'destroy']);
-
 });
