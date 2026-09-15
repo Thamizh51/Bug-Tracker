@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Bug;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +27,28 @@ class BugController extends Controller
             'project' => $project->name,
             'bugs' => $bugs,
         ]);
+    }
+
+    /**
+     * Convert developer ID to developer name.
+     */
+    private function getDeveloperName($developerId)
+    {
+        if (empty($developerId)) {
+            return null;
+        }
+
+        $developer = User::where('id', $developerId)
+            ->where('role', 'developer')
+            ->first();
+
+        if (!$developer) {
+            abort(response()->json([
+                'message' => 'Invalid developer ID.'
+            ], 422));
+        }
+
+        return $developer->name;
     }
 
     /**
@@ -59,8 +82,8 @@ class BugController extends Controller
         $validated = $request->validate([
             'assigned_to' => [
                 'nullable',
-                'string',
-                'max:255',
+                'integer',
+                'exists:users,id',
             ],
 
             'assigned_team' => [
@@ -119,6 +142,11 @@ class BugController extends Controller
             ], 422);
         }
 
+        // Convert developer ID to developer name.
+        $assignedToName = $this->getDeveloperName(
+            $validated['assigned_to'] ?? null
+        );
+
         $imagePath = $request
             ->file('image')
             ->store('bugs', 'public');
@@ -127,7 +155,7 @@ class BugController extends Controller
             'project_id' => $project->id,
             'reported_by' => $user->name,
 
-            'assigned_to' => $validated['assigned_to'] ?? null,
+            'assigned_to' => $assignedToName,
             'assigned_team' => $validated['assigned_team'] ?? null,
 
             'title' => $validated['title'],
@@ -280,8 +308,8 @@ class BugController extends Controller
         $validated = $request->validate([
             'assigned_to' => [
                 'nullable',
-                'string',
-                'max:255',
+                'integer',
+                'exists:users,id',
             ],
 
             'assigned_team' => [
@@ -333,6 +361,13 @@ class BugController extends Controller
                 Rule::in(['low', 'medium', 'high', 'critical']),
             ],
         ]);
+
+        // Convert developer ID to developer name.
+        if (array_key_exists('assigned_to', $validated)) {
+            $validated['assigned_to'] = $this->getDeveloperName(
+                $validated['assigned_to']
+            );
+        }
 
         if ($request->hasFile('image')) {
             if ($bug->image && Storage::disk('public')->exists($bug->image)) {
