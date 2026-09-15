@@ -19,17 +19,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/developers', [UserController::class, 'developers']);
 
     // Project Routes
+
+    // Fetch all projects
     Route::get('/projects', [ProjectController::class, 'show']);
+
+    // Create a new project
     Route::post('/create-project', [ProjectController::class, 'store']);
+
+    // Update an existing project
     Route::put('/projects/{project}', [ProjectController::class, 'update']);
+
+    // Delete a project
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
 
     // Bug Routes
+
+    // Fetch all bugs for a specific project
     Route::get('/projects/{project}/bugs', [BugController::class, 'show']);
+
+    // Create a new bug for a specific project
     Route::post('/projects/{project}/create-bug', [BugController::class, 'store']);
+
+    // Update the status of a specific bug
     Route::put('/bugs/{bug}/status', [BugController::class, 'updateStatus']);
+
+    // Fetch all bugs assigned to the logged-in developer
     Route::get('/developer/assigned-bugs', [BugController::class, 'assignedBugs']);
+
+    // Views A Single Bug
     Route::get('/bugs/{bug}', [BugController::class, 'singleBug']);
+
     // Tester modifies a bug
     Route::put('/bugs/{bug}', [BugController::class, 'update']);
 

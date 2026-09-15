@@ -17,7 +17,7 @@ class BugController extends Controller
     public function show(Project $project)
     {
         $bugs = $project->bugs()
-            ->with(['reporter', 'project'])
+            ->with(['reporter'])
             ->latest()
             ->get();
 
