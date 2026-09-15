@@ -59,4 +59,26 @@ class UserController extends Controller
             ],
         ], 201);
     }
+    public function index()
+    {
+        $users = User::whereIn('role', ['developer', 'tester'])->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Users fetched successfully.',
+            'users' => $users,
+        ], 200);
+    }
+    public function developers()
+    {
+        $developers = User::where('role', 'developer')
+            ->select('id', 'name', 'email', 'role', 'created_at')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'developers' => $developers,
+        ]);
+    }
 }

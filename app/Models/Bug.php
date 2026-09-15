@@ -17,6 +17,7 @@ class Bug extends Model
         'expected_result',
         'actual_result',
         'image',
+        'url',
         'severity',
         'priority',
         'status',
@@ -28,7 +29,26 @@ class Bug extends Model
     ];
 
     /**
-     * Project this bug belongs to
+     * Automatically include image_url in JSON responses.
+     */
+    protected $appends = [
+        'image_url',
+    ];
+
+    /**
+     * Return the complete public image URL.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) {
+            return null;
+        }
+
+        return asset('storage/' . $this->image);
+    }
+
+    /**
+     * Project this bug belongs to.
      */
     public function project(): BelongsTo
     {
@@ -36,10 +56,10 @@ class Bug extends Model
     }
 
     /**
-     * Tester who reported the bug
+     * Tester who reported the bug.
      */
     public function reporter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reported_by');
+        return $this->belongsTo(User::class, 'reported_by', 'name');
     }
 }

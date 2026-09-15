@@ -13,6 +13,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
 
     Route::post('/admin/users', [UserController::class, 'store']);
+    Route::get('/admin/users', [UserController::class, 'index']);
+    Route::delete('/admin/users/{user}', [UserController::class, 'destroy']);
+
+    Route::get('/admin/developers', [UserController::class, 'developers']);
 
     // Project Routes
     Route::get('/projects', [ProjectController::class, 'show']);
