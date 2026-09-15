@@ -7,8 +7,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
+
 class ProjectController extends Controller
 {
+
+
+    public function show()
+    {
+        $user = Auth::user();
+
+        $projects = Project::latest()->get();
+
+        return response()->json([
+            'message' => 'Projects fetched successfully',
+            'projects' => $projects,
+        ]);
+    }
     /**
      * Create a new project
      */
