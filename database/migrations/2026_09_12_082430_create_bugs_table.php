@@ -25,10 +25,7 @@ return new class extends Migration
             $table->string('assigned_to')->nullable();
 
             // Developer team
-            $table->enum('assigned_team', [
-                'frontend',
-                'backend',
-            ])->nullable();
+            $table->string('assigned_team')->nullable();
 
             // Bug details
             $table->string('title');
