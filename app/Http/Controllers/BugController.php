@@ -115,7 +115,7 @@ class BugController extends Controller
             'url' => [
                 'nullable',
                 'url',
-                'max:2048',
+                'max:2000',
             ],
 
             'image' => [
@@ -342,7 +342,7 @@ class BugController extends Controller
             'url' => [
                 'nullable',
                 'url',
-                'max:2048',
+                'max:2000',
             ],
 
             'image' => [
