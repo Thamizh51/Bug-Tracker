@@ -208,6 +208,7 @@ class BugController extends Controller
                     'in_progress',
                     'resolved',
                     'reopened',
+                    'pending',
                 ]),
             ],
         ]);
