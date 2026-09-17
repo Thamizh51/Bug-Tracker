@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'description',
@@ -15,18 +16,26 @@ class Project extends Model
         'created_by',
     ];
 
-    /**
-     * User who created the project
-     */
-    public function creator(): BelongsTo
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Bugs belonging to this project
-     */
-    public function bugs(): HasMany
+    public function bugs()
     {
         return $this->hasMany(Bug::class);
     }

@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -15,11 +16,15 @@ return new class extends Migration
 
             $table->text('description')->nullable();
 
+            // Project status
             $table->enum('status', [
                 'active',
-                'inactive',
+                'finished',
+                'onhold',
+                'archived',
             ])->default('active');
 
+            // Admin who created the project
             $table->foreignId('created_by')
                 ->constrained('users')
                 ->cascadeOnDelete();

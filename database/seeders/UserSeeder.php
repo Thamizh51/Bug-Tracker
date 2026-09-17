@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         // Admin
@@ -19,39 +16,43 @@ class UserSeeder extends Seeder
             'email' => 'admin@bugtracker.com',
             'password' => Hash::make('password123'),
             'role' => 'admin',
+            'department' => null,
         ]);
 
-        // Developer 1
+        // Backend Developer - Mohan
         User::create([
-            'name' => 'John Developer',
-            'email' => 'developer1@bugtracker.com',
+            'name' => 'Mohan',
+            'email' => 'mohan@bugtracker.com',
             'password' => Hash::make('password123'),
             'role' => 'developer',
+            'department' => 'backend',
         ]);
 
-        // Developer 2
+        // Backend Developer - Selvam
         User::create([
-            'name' => 'David Developer',
-            'email' => 'developer2@bugtracker.com',
+            'name' => 'Selvam',
+            'email' => 'selvam@bugtracker.com',
             'password' => Hash::make('password123'),
             'role' => 'developer',
+            'department' => 'backend',
         ]);
 
-        // Tester 1
+        // Frontend Developer - Murali
         User::create([
-            'name' => 'Test User',
-            'email' => 'tester1@bugtracker.com',
+            'name' => 'Murali',
+            'email' => 'murali@bugtracker.com',
             'password' => Hash::make('password123'),
-            'role' => 'tester',
+            'role' => 'developer',
+            'department' => 'frontend',
         ]);
 
-        // Tester 2
+        // Frontend Developer - Seetha
         User::create([
-            'name' => 'Sarah Tester',
-            'email' => 'tester2@bugtracker.com',
+            'name' => 'Seetha',
+            'email' => 'seetha@bugtracker.com',
             'password' => Hash::make('password123'),
-            'role' => 'tester',
+            'role' => 'developer',
+            'department' => 'frontend',
         ]);
     }
 }
-

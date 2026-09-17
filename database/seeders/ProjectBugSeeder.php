@@ -2,173 +2,236 @@
 
 namespace Database\Seeders;
 
-use App\Models\Project;
 use App\Models\Bug;
+use App\Models\Project;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class ProjectBugSeeder extends Seeder
 {
     public function run(): void
     {
-        // Get existing users from UserSeeder
-        $admin = User::where('email', 'admin@bugtracker.com')->firstOrFail();
+        /*
+        |--------------------------------------------------------------------------
+        | Get users
+        |--------------------------------------------------------------------------
+        */
 
-        $developer1 = User::where(
-            'email',
-            'developer1@bugtracker.com'
-        )->firstOrFail();
+        $admin = User::where('email', 'admin@bugtracker.com')->first();
 
-        $developer2 = User::where(
-            'email',
-            'developer2@bugtracker.com'
-        )->firstOrFail();
+        $mohan = User::where('email', 'mohan@bugtracker.com')->first();
+        $selvam = User::where('email', 'selvam@bugtracker.com')->first();
 
-        $tester1 = User::where(
-            'email',
-            'tester1@bugtracker.com'
-        )->firstOrFail();
+        $murali = User::where('email', 'murali@bugtracker.com')->first();
+        $seetha = User::where('email', 'seetha@bugtracker.com')->first();
 
-        $tester2 = User::where(
-            'email',
-            'tester2@bugtracker.com'
-        )->firstOrFail();
+        if (
+            !$admin ||
+            !$mohan ||
+            !$selvam ||
+            !$murali ||
+            !$seetha
+        ) {
+            throw new \Exception(
+                'Required users are missing. Check UserSeeder email addresses.'
+            );
+        }
 
-        // Three projects
+        /*
+        |--------------------------------------------------------------------------
+        | Project data
+        |--------------------------------------------------------------------------
+        */
+
         $projects = [
             [
                 'name' => 'AI Prep',
-                'description' => 'AI-powered interview preparation platform.',
-                'status' => 'active',
+                'description' => 'AI-based interview preparation platform.',
             ],
             [
                 'name' => 'Resume Analyzer',
-                'description' => 'Application for analyzing resumes and generating ATS scores.',
-                'status' => 'active',
+                'description' => 'Application for analyzing resumes and ATS scores.',
             ],
             [
                 'name' => 'E-Commerce Platform',
-                'description' => 'Online shopping platform with product and order management.',
-                'status' => 'active',
+                'description' => 'Online shopping and product management platform.',
             ],
         ];
 
-        $bugData = [
+        /*
+        |--------------------------------------------------------------------------
+        | Bug data
+        |--------------------------------------------------------------------------
+        */
+
+        $bugTemplates = [
             [
-                'title' => 'Login button not working',
-                'description' => 'The login button does not submit the form when valid credentials are entered.',
-                'expected_result' => 'The user should be logged in and redirected to the dashboard.',
-                'actual_result' => 'The button does not respond after clicking.',
+                'title' => 'Login button is not working',
+                'description' => 'The login button does not submit the login form.',
+                'expected_result' => 'User should be logged in successfully.',
+                'actual_result' => 'Nothing happens after clicking the login button.',
                 'severity' => 'high',
                 'priority' => 'high',
-                'status' => 'assigned',
                 'assigned_team' => 'frontend',
+                'assigned_to' => $murali->name,
+                'status' => 'assigned',
             ],
             [
-                'title' => 'API returns 500 error',
-                'description' => 'The project API returns an internal server error for valid requests.',
-                'expected_result' => 'The API should return the requested data with HTTP 200.',
-                'actual_result' => 'The server returns HTTP 500.',
-                'severity' => 'critical',
-                'priority' => 'critical',
-                'status' => 'in_progress',
-                'assigned_team' => 'backend',
-            ],
-            [
-                'title' => 'Dashboard loading slowly',
-                'description' => 'The dashboard takes several seconds to load after login.',
-                'expected_result' => 'The dashboard should load within a reasonable time.',
-                'actual_result' => 'The dashboard takes more than five seconds to load.',
+                'title' => 'Invalid email validation missing',
+                'description' => 'The application accepts invalid email formats.',
+                'expected_result' => 'Invalid email formats should show a validation message.',
+                'actual_result' => 'The form accepts invalid email addresses.',
                 'severity' => 'medium',
                 'priority' => 'medium',
-                'status' => 'open',
-                'assigned_team' => 'backend',
+                'assigned_team' => 'frontend',
+                'assigned_to' => $seetha->name,
+                'status' => 'pending',
             ],
             [
-                'title' => 'Mobile layout issue',
-                'description' => 'Some dashboard elements overlap on mobile screens.',
-                'expected_result' => 'All dashboard elements should be responsive.',
+                'title' => 'API returns HTTP 500 error',
+                'description' => 'The user API returns an internal server error.',
+                'expected_result' => 'The API should return valid user data.',
+                'actual_result' => 'The API returns HTTP 500.',
+                'severity' => 'critical',
+                'priority' => 'urgent',
+                'assigned_team' => 'backend',
+                'assigned_to' => $mohan->name,
+                'status' => 'in_progress',
+            ],
+            [
+                'title' => 'Password reset email not sent',
+                'description' => 'Users do not receive password reset emails.',
+                'expected_result' => 'Password reset email should be sent.',
+                'actual_result' => 'No email is received.',
+                'severity' => 'high',
+                'priority' => 'high',
+                'assigned_team' => 'backend',
+                'assigned_to' => $selvam->name,
+                'status' => 'assigned',
+            ],
+            [
+                'title' => 'Dashboard cards are misaligned',
+                'description' => 'Dashboard cards are not aligned correctly on smaller screens.',
+                'expected_result' => 'Dashboard cards should be responsive.',
                 'actual_result' => 'Cards overlap on smaller screens.',
                 'severity' => 'medium',
-                'priority' => 'high',
-                'status' => 'resolved',
+                'priority' => 'medium',
                 'assigned_team' => 'frontend',
+                'assigned_to' => $murali->name,
+                'status' => 'in_progress',
             ],
             [
-                'title' => 'Incorrect error message',
-                'description' => 'The application displays an incorrect message when an invalid form is submitted.',
-                'expected_result' => 'A clear validation error should be displayed.',
-                'actual_result' => 'The wrong error message is shown.',
+                'title' => 'Project creation fails',
+                'description' => 'Admin cannot create a new project.',
+                'expected_result' => 'A project should be created successfully.',
+                'actual_result' => 'Project creation returns an error.',
+                'severity' => 'critical',
+                'priority' => 'urgent',
+                'assigned_team' => 'backend',
+                'assigned_to' => $mohan->name,
+                'status' => 'resolved',
+            ],
+            [
+                'title' => 'Bug list pagination is incorrect',
+                'description' => 'The bug list displays duplicate records during pagination.',
+                'expected_result' => 'Pagination should display unique records.',
+                'actual_result' => 'Some records are duplicated.',
+                'severity' => 'medium',
+                'priority' => 'low',
+                'assigned_team' => 'backend',
+                'assigned_to' => $selvam->name,
+                'status' => 'pending',
+            ],
+            [
+                'title' => 'Mobile menu does not open',
+                'description' => 'The mobile navigation menu cannot be opened.',
+                'expected_result' => 'The mobile menu should open when clicked.',
+                'actual_result' => 'The menu remains closed.',
+                'severity' => 'high',
+                'priority' => 'high',
+                'assigned_team' => 'frontend',
+                'assigned_to' => $seetha->name,
+                'status' => 'reopened',
+            ],
+            [
+                'title' => 'Search returns incorrect results',
+                'description' => 'Searching for a project returns unrelated projects.',
+                'expected_result' => 'Search should return matching projects only.',
+                'actual_result' => 'Unrelated projects are displayed.',
+                'severity' => 'medium',
+                'priority' => 'medium',
+                'assigned_team' => 'backend',
+                'assigned_to' => $mohan->name,
+                'status' => 'assigned',
+            ],
+            [
+                'title' => 'Success message is not displayed',
+                'description' => 'The success message is missing after saving changes.',
+                'expected_result' => 'A success message should be displayed.',
+                'actual_result' => 'The data saves but no message appears.',
                 'severity' => 'low',
                 'priority' => 'low',
-                'status' => 'reopened',
                 'assigned_team' => 'frontend',
+                'assigned_to' => $murali->name,
+                'status' => 'resolved',
             ],
         ];
 
+        /*
+        |--------------------------------------------------------------------------
+        | Create projects and bugs
+        |--------------------------------------------------------------------------
+        */
+
         foreach ($projects as $projectData) {
-            // Create project
             $project = Project::create([
                 'name' => $projectData['name'],
                 'description' => $projectData['description'],
-                'status' => $projectData['status'],
+                'status' => 'active',
                 'created_by' => $admin->id,
             ]);
 
-            // Create 5 bugs for each project
-            foreach ($bugData as $index => $data) {
-                $developer = $index % 2 === 0
-                    ? $developer1
-                    : $developer2;
-
-                $tester = $index % 2 === 0
-                    ? $tester1
-                    : $tester2;
-
+            foreach ($bugTemplates as $index => $bugData) {
                 Bug::create([
                     'project_id' => $project->id,
 
-                    // Your migration uses string reported_by
-                    'reported_by' => $tester->name,
+                    // Admin is used as the sample reporter because
+                    // the requested five users do not include a tester.
+                    'reported_by' => $admin->name,
 
-                    // Developer name, not developer ID
-                    'assigned_to' => $developer->name,
+                    'assigned_to' => $bugData['assigned_to'],
+                    'assigned_team' => $bugData['assigned_team'],
 
-                    'assigned_team' => $data['assigned_team'],
+                    'title' => $bugData['title'],
+                    'description' => $bugData['description'],
+                    'expected_result' => $bugData['expected_result'],
+                    'actual_result' => $bugData['actual_result'],
 
-                    'title' => $data['title'] . ' - ' . $project->name,
+                    'image' => null,
 
-                    'description' => $data['description'],
+                    'url' => 'https://example.com/' .
+                        strtolower(str_replace(' ', '-', $project->name)),
 
-                    'expected_result' => $data['expected_result'],
+                    'severity' => $bugData['severity'],
+                    'priority' => $bugData['priority'],
+                    'status' => $bugData['status'],
 
-                    'actual_result' => $data['actual_result'],
-
-                    // Placeholder screenshot path
-                    'image' => 'bugs/sample-' . ($index + 1) . '.png',
-
-                    'severity' => $data['severity'],
-
-                    'priority' => $data['priority'],
-
-                    'status' => $data['status'],
-
-                    'resolved_at' => $data['status'] === 'resolved'
-                        ? now()
+                    'resolved_at' => in_array(
+                        $bugData['status'],
+                        ['resolved', 'closed']
+                    )
+                        ? Carbon::now()
                         : null,
 
-                    // Sample URL
-                    'url' => 'https://example.com/' . strtolower(
-                        str_replace(' ', '-', $project->name)
-                    ),
-
-                    'created_at' => now()->subDays($index),
-
-                    'updated_at' => now(),
+                    'created_at' => Carbon::now()->subDays($index),
+                    'updated_at' => Carbon::now()->subDays($index),
                 ]);
             }
         }
 
-        $this->command->info('3 projects and 15 bugs created successfully.');
+        $this->command->info(
+            '3 projects and 30 bugs created successfully.'
+        );
     }
 }

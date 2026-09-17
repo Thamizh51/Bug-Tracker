@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -16,14 +17,19 @@ return new class extends Migration
                 ->constrained('projects')
                 ->cascadeOnDelete();
 
-            // Tester who reported the bug
+            // Tester name who reported the bug
             $table->string('reported_by');
 
-            // Developer name
+            // Developer name assigned to the bug
             $table->string('assigned_to')->nullable();
 
             // Developer team
-            $table->string('assigned_team')->nullable();
+            $table->enum('assigned_team', [
+                'frontend',
+                'backend',
+                'seo',
+                'devops',
+            ])->nullable();
 
             // Bug details
             $table->string('title');
@@ -37,30 +43,34 @@ return new class extends Migration
             // Screenshot path
             $table->string('image')->nullable();
 
+            // Bug URL
+            $table->string('url', 2000)->nullable();
+
             // Severity
             $table->enum('severity', [
-                'low',
-                'medium',
-                'high',
                 'critical',
+                'high',
+                'medium',
+                'low',
             ])->default('medium');
 
             // Priority
             $table->enum('priority', [
-                'low',
-                'medium',
+                'urgent',
                 'high',
-                'critical',
+                'medium',
+                'low',
             ])->default('medium');
 
-            // Status
+            // Bug status
             $table->enum('status', [
-                'open',
                 'assigned',
+                'pending',
                 'in_progress',
                 'resolved',
                 'reopened',
-            ])->default('open');
+                'closed',
+            ])->default('assigned');
 
             $table->timestamp('resolved_at')->nullable();
 

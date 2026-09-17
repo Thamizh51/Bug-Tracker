@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Bug extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'project_id',
         'reported_by',
@@ -24,42 +27,51 @@ class Bug extends Model
         'resolved_at',
     ];
 
-    protected $casts = [
-        'resolved_at' => 'datetime',
-    ];
-
-    /**
-     * Automatically include image_url in JSON responses.
-     */
     protected $appends = [
         'image_url',
     ];
 
-    /**
-     * Return the complete public image URL.
-     */
-    public function getImageUrlAttribute(): ?string
+    protected function casts(): array
+    {
+        return [
+            'resolved_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function reporter()
+    {
+        return $this->belongsTo(
+            User::class,
+            'reported_by',
+            'name'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors
+    |--------------------------------------------------------------------------
+    */
+
+    public function getImageUrlAttribute()
     {
         if (!$this->image) {
             return null;
         }
 
-        return asset('storage/' . $this->image);
-    }
-
-    /**
-     * Project this bug belongs to.
-     */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
-    }
-
-    /**
-     * Tester who reported the bug.
-     */
-    public function reporter(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'reported_by', 'name');
+        return Storage::url($this->image);
     }
 }

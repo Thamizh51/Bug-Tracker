@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\Bug;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,33 +18,39 @@ class BugController extends Controller
     public function show(Project $project)
     {
         $bugs = $project->bugs()
-            ->with(['reporter'])
+            ->with([
+                'project',
+                'reporter',
+            ])
             ->latest()
             ->get();
 
         return response()->json([
-            'message' => 'Project bug reports fetched successfully',
+            'success' => true,
+            'message' => 'Project bug reports fetched successfully.',
             'project' => $project->name,
             'bugs' => $bugs,
-        ]);
+        ], 200);
     }
 
     /**
      * Convert developer ID to developer name.
      */
-    private function getDeveloperName($developerId)
+    private function getDeveloperName(?int $developerId): ?string
     {
-        if (empty($developerId)) {
+        if ($developerId === null) {
             return null;
         }
 
-        $developer = User::where('id', $developerId)
+        $developer = User::query()
+            ->where('id', $developerId)
             ->where('role', 'developer')
             ->first();
 
         if (!$developer) {
             abort(response()->json([
-                'message' => 'Invalid developer ID.'
+                'success' => false,
+                'message' => 'Invalid developer ID.',
             ], 422));
         }
 
@@ -53,7 +59,6 @@ class BugController extends Controller
 
     /**
      * Create a bug - Tester only.
-     * Image is required.
      */
     public function store(Request $request, Project $project)
     {
@@ -61,22 +66,23 @@ class BugController extends Controller
 
         if (!$user) {
             return response()->json([
+                'success' => false,
                 'message' => 'Unauthenticated.',
             ], 401);
         }
 
         if ($user->role !== 'tester') {
             return response()->json([
+                'success' => false,
                 'message' => 'Only testers can create bugs.',
             ], 403);
         }
 
-        if ($request->filled('assigned_team')) {
-            $request->merge([
-                'assigned_team' => ucfirst(
-                    strtolower($request->input('assigned_team'))
-                ),
-            ]);
+        if ($project->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot report a bug for an inactive project.',
+            ], 422);
         }
 
         $validated = $request->validate([
@@ -88,7 +94,12 @@ class BugController extends Controller
 
             'assigned_team' => [
                 'nullable',
-                Rule::in(['Frontend', 'Backend']),
+                Rule::in([
+                    'frontend',
+                    'backend',
+                    'seo',
+                    'devops',
+                ]),
             ],
 
             'title' => [
@@ -127,22 +138,25 @@ class BugController extends Controller
 
             'severity' => [
                 'nullable',
-                Rule::in(['low', 'medium', 'high', 'critical']),
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                    'critical',
+                ]),
             ],
 
             'priority' => [
                 'nullable',
-                Rule::in(['low', 'medium', 'high', 'critical']),
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                    'urgent',
+                ]),
             ],
         ]);
 
-        if ($project->status !== 'active') {
-            return response()->json([
-                'message' => 'You cannot report a bug for an inactive project.',
-            ], 422);
-        }
-
-        // Convert developer ID to developer name.
         $assignedToName = $this->getDeveloperName(
             $validated['assigned_to'] ?? null
         );
@@ -169,19 +183,26 @@ class BugController extends Controller
             'severity' => $validated['severity'] ?? 'medium',
             'priority' => $validated['priority'] ?? 'medium',
 
-            'status' => 'open',
+            'status' => 'assigned',
         ]);
 
-        $bug->load(['project', 'reporter']);
+        $bug->load([
+            'project',
+            'reporter',
+        ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Bug created successfully by tester.',
             'bug' => $bug,
         ], 201);
     }
 
     /**
-     * Update bug status - Developer only.
+     * Developer updates bug status.
+     *
+     * Developer allowed statuses:
+     * assigned, pending, in_progress, resolved
      */
     public function updateStatus(Request $request, Bug $bug)
     {
@@ -189,13 +210,22 @@ class BugController extends Controller
 
         if (!$user) {
             return response()->json([
+                'success' => false,
                 'message' => 'Unauthenticated.',
             ], 401);
         }
 
         if ($user->role !== 'developer') {
             return response()->json([
+                'success' => false,
                 'message' => 'Only developers can update bug status.',
+            ], 403);
+        }
+
+        if ($bug->assigned_to !== $user->name) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This bug is not assigned to you.',
             ], 403);
         }
 
@@ -203,19 +233,19 @@ class BugController extends Controller
             'status' => [
                 'required',
                 Rule::in([
-                    'open',
                     'assigned',
+                    'pending',
                     'in_progress',
                     'resolved',
-                    'reopened',
-                    'pending',
                 ]),
             ],
         ]);
 
-        $bug->status = $validated['status'];
+        $newStatus = $validated['status'];
 
-        if ($validated['status'] === 'resolved') {
+        $bug->status = $newStatus;
+
+        if ($newStatus === 'resolved') {
             $bug->resolved_at = now();
         } else {
             $bug->resolved_at = null;
@@ -223,10 +253,80 @@ class BugController extends Controller
 
         $bug->save();
 
-        $bug->load(['project', 'reporter']);
+        $bug->load([
+            'project',
+            'reporter',
+        ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Bug status updated successfully.',
+            'bug' => $bug,
+        ], 200);
+    }
+
+    /**
+     * Tester retests a resolved bug.
+     *
+     * Allowed changes:
+     * resolved -> reopened
+     * resolved -> closed
+     */
+    public function retest(Request $request, Bug $bug)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        if ($user->role !== 'tester') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only testers can retest bugs.',
+            ], 403);
+        }
+
+        if ($bug->status !== 'resolved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only resolved bugs can be retested.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                Rule::in([
+                    'reopened',
+                    'closed',
+                ]),
+            ],
+        ]);
+
+        $newStatus = $validated['status'];
+
+        $bug->status = $newStatus;
+
+        if ($newStatus === 'reopened') {
+            $bug->resolved_at = null;
+        }
+
+        $bug->save();
+
+        $bug->load([
+            'project',
+            'reporter',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $newStatus === 'closed'
+                ? 'Bug retested and closed successfully.'
+                : 'Bug reopened successfully.',
             'bug' => $bug,
         ], 200);
     }
@@ -240,22 +340,28 @@ class BugController extends Controller
 
         if (!$user) {
             return response()->json([
+                'success' => false,
                 'message' => 'Unauthenticated.',
             ], 401);
         }
 
         if ($user->role !== 'developer') {
             return response()->json([
+                'success' => false,
                 'message' => 'Only developers can view assigned bugs.',
             ], 403);
         }
 
         $bugs = Bug::where('assigned_to', $user->name)
-            ->with('project:id,name')
+            ->with([
+                'project:id,name',
+                'reporter:id,name,email',
+            ])
             ->latest()
             ->paginate(10);
 
         return response()->json([
+            'success' => true,
             'message' => 'Assigned bugs fetched successfully.',
             'total_bugs' => $bugs->total(),
             'bugs' => $bugs->items(),
@@ -263,8 +369,9 @@ class BugController extends Controller
                 'current_page' => $bugs->currentPage(),
                 'per_page' => $bugs->perPage(),
                 'last_page' => $bugs->lastPage(),
+                'total' => $bugs->total(),
             ],
-        ]);
+        ], 200);
     }
 
     /**
@@ -276,76 +383,79 @@ class BugController extends Controller
 
         if (!$user) {
             return response()->json([
+                'success' => false,
                 'message' => 'Unauthenticated.',
             ], 401);
         }
 
         if ($user->role !== 'tester') {
             return response()->json([
+                'success' => false,
                 'message' => 'Only testers can modify bugs.',
             ], 403);
         }
+ 
 
-        if ($bug->reported_by !== $user->name) {
+        if (in_array($bug->status, ['resolved', 'closed'])) {
             return response()->json([
-                'message' => 'You can only modify your own bug reports.',
-            ], 403);
-        }
-
-        if ($bug->status === 'resolved') {
-            return response()->json([
-                'message' => 'Resolved bugs cannot be modified.',
+                'success' => false,
+                'message' => 'Resolved or closed bugs cannot be modified.',
             ], 422);
-        }
-
-        if ($request->filled('assigned_team')) {
-            $request->merge([
-                'assigned_team' => ucfirst(
-                    strtolower($request->input('assigned_team'))
-                ),
-            ]);
         }
 
         $validated = $request->validate([
             'assigned_to' => [
+                'sometimes',
                 'nullable',
                 'integer',
                 'exists:users,id',
             ],
 
             'assigned_team' => [
+                'sometimes',
                 'nullable',
-                Rule::in(['Frontend', 'Backend']),
+                Rule::in([
+                    'frontend',
+                    'backend',
+                    'seo',
+                    'devops',
+                ]),
             ],
 
             'title' => [
                 'sometimes',
+                'required',
                 'string',
                 'max:255',
             ],
 
             'description' => [
                 'sometimes',
+                'required',
                 'string',
             ],
 
             'expected_result' => [
+                'sometimes',
                 'nullable',
                 'string',
             ],
 
             'actual_result' => [
+                'sometimes',
                 'nullable',
                 'string',
             ],
 
             'url' => [
+                'sometimes',
                 'nullable',
                 'url',
                 'max:2000',
             ],
 
             'image' => [
+                'sometimes',
                 'nullable',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
@@ -353,25 +463,42 @@ class BugController extends Controller
             ],
 
             'severity' => [
+                'sometimes',
                 'nullable',
-                Rule::in(['low', 'medium', 'high', 'critical']),
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                    'critical',
+                ]),
             ],
 
             'priority' => [
+                'sometimes',
                 'nullable',
-                Rule::in(['low', 'medium', 'high', 'critical']),
+                Rule::in([
+                    'low',
+                    'medium',
+                    'high',
+                    'urgent',
+                ]),
             ],
         ]);
 
-        // Convert developer ID to developer name.
         if (array_key_exists('assigned_to', $validated)) {
             $validated['assigned_to'] = $this->getDeveloperName(
                 $validated['assigned_to']
             );
+
+            // Reassigning the bug sends it back to assigned status.
+            $validated['status'] = 'assigned';
         }
 
         if ($request->hasFile('image')) {
-            if ($bug->image && Storage::disk('public')->exists($bug->image)) {
+            if (
+                $bug->image &&
+                Storage::disk('public')->exists($bug->image)
+            ) {
                 Storage::disk('public')->delete($bug->image);
             }
 
@@ -382,9 +509,13 @@ class BugController extends Controller
 
         $bug->update($validated);
 
-        $bug->load(['project', 'reporter']);
+        $bug->load([
+            'project',
+            'reporter',
+        ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Bug updated successfully.',
             'bug' => $bug,
         ], 200);
@@ -399,35 +530,43 @@ class BugController extends Controller
 
         if (!$user) {
             return response()->json([
+                'success' => false,
                 'message' => 'Unauthenticated.',
             ], 401);
         }
 
         if ($user->role !== 'tester') {
             return response()->json([
+                'success' => false,
                 'message' => 'Only testers can delete bugs.',
             ], 403);
         }
 
         if ($bug->reported_by !== $user->name) {
             return response()->json([
+                'success' => false,
                 'message' => 'You can only delete your own bug reports.',
             ], 403);
         }
 
-        if ($bug->status === 'resolved') {
+        if (in_array($bug->status, ['resolved', 'closed'])) {
             return response()->json([
-                'message' => 'Resolved bugs cannot be deleted.',
+                'success' => false,
+                'message' => 'Resolved or closed bugs cannot be deleted.',
             ], 422);
         }
 
-        if ($bug->image && Storage::disk('public')->exists($bug->image)) {
+        if (
+            $bug->image &&
+            Storage::disk('public')->exists($bug->image)
+        ) {
             Storage::disk('public')->delete($bug->image);
         }
 
         $bug->delete();
 
         return response()->json([
+            'success' => true,
             'message' => 'Bug deleted successfully.',
         ], 200);
     }
@@ -443,6 +582,7 @@ class BugController extends Controller
         ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Bug fetched successfully.',
             'bug' => $bug,
         ], 200);
