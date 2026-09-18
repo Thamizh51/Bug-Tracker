@@ -149,7 +149,7 @@ class ProjectController extends Controller
                     'active',
                     'finished',
                     'onhold',
-                    'archieved',
+                    'archived',
                 ]),
             ],
         ]);
