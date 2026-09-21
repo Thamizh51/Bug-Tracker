@@ -549,12 +549,6 @@ class BugController extends Controller
             ], 403);
         }
 
-        if (in_array($bug->status, ['resolved', 'closed'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Resolved or closed bugs cannot be deleted.',
-            ], 422);
-        }
 
         if (
             $bug->image &&
