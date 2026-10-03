@@ -101,6 +101,7 @@ class UserController extends Controller
                 Rule::in([
                     'developer',
                     'tester',
+                    'admin'
                 ]),
             ],
 
