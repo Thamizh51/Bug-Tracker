@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // Allows Composer to run as root if your Jenkins agent requires it
         COMPOSER_ALLOW_SUPERUSER = '1'
     }
 
@@ -21,6 +22,7 @@ pipeline {
 
         stage('Prepare Laravel') {
             steps {
+                // Copy environment file and generate application key
                 sh 'cp .env.example .env'
                 sh 'php artisan key:generate'
             }
@@ -41,19 +43,19 @@ pipeline {
 
         stage('Start Application') {
             steps {
-                // Optional: Stop any existing server instance running on port 8000
+                // Stop any existing server instance running on port 8000
                 sh 'fuser -k 8000/tcp || true'
                 
-                // Start Laravel server in the background
-                sh 'nohup php artisan serve --host=0.0.0.0 --port=8000 > storage/logs/server.log 2>&1 &'
-                echo "Laravel application started on port 8000!"
+                // JENKINS_NODE_COOKIE=dontKillMe keeps the server alive after the build finishes
+                sh 'JENKINS_NODE_COOKIE=dontKillMe nohup php artisan serve --host=0.0.0.0 --port=8000 > storage/logs/server.log 2>&1 &'
+                echo "Laravel application started persistently on port 8000!"
             }
         }
     }
 
     post {
         success {
-            echo "Bug Tracker pipeline completed and app is running!"
+            echo "Bug Tracker pipeline completed and app is running on port 8000!"
         }
         failure {
             echo "Bug Tracker pipeline failed."
