@@ -7,15 +7,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Uses the credentials configured in Jenkins to authenticate with GitHub
-                git branch: 'main', 
-                    credentialsId: 'github-token', 
-                    url: 'https://github.com/your-username/your-bug-tracker-repo.git'
-            }
-        }
-
         stage('Check PHP and Composer') {
             steps {
                 sh 'php -v'
