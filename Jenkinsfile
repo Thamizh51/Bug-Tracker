@@ -28,18 +28,18 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                // Run your unit/feature tests
-                sh 'php artisan test'
-            }
-        }
-
         stage('Build Laravel Cache') {
             steps {
                 sh 'php artisan config:cache'
                 sh 'php artisan route:cache'
                 sh 'php artisan view:cache'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                // Run your unit/feature tests
+                sh 'php artisan test'
             }
         }
     }
