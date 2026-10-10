@@ -32,7 +32,7 @@ pipeline {
             steps {
                 sh 'php artisan config:cache'
                 sh 'php artisan route:cache'
-                sh 'php artisan view:cache'
+                // Removed view:cache to prevent DirectoryNotFoundException if views folder is empty/missing
             }
         }
 
