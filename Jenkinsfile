@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Allows Composer to run as root if your Jenkins agent requires it
         COMPOSER_ALLOW_SUPERUSER = '1'
     }
 
@@ -22,13 +21,8 @@ pipeline {
 
         stage('Prepare Laravel') {
             steps {
-                // Copy environment files for application and testing
                 sh 'cp .env.example .env'
-                sh 'cp .env.example .env.testing'
-                
-                // Generate application key for both
                 sh 'php artisan key:generate'
-                sh 'php artisan key:generate --env=testing'
             }
         }
 
@@ -41,29 +35,28 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                script {
-                    try {
-                        // Run database migrations for the testing environment (connects to MySQL)
-                        sh 'php artisan migrate:fresh --env=testing --force'
-                        
-                        // Execute tests
-                        sh 'php artisan test'
-                    } catch (Exception e) {
-                        echo "Tests failed! Printing storage/logs/laravel.log for debugging:"
-                        sh 'cat storage/logs/laravel.log || true'
-                        error("Pipeline failed during testing.")
-                    }
-                }
+                sh 'php artisan test'
+            }
+        }
+
+        stage('Start Application') {
+            steps {
+                // Optional: Stop any existing server instance running on port 8000
+                sh 'fuser -k 8000/tcp || true'
+                
+                // Start Laravel server in the background
+                sh 'nohup php artisan serve --host=0.0.0.0 --port=8000 > storage/logs/server.log 2>&1 &'
+                echo "Laravel application started on port 8000!"
             }
         }
     }
 
     post {
         success {
-            echo "Bug Tracker pipeline completed successfully!"
+            echo "Bug Tracker pipeline completed and app is running!"
         }
         failure {
-            echo "Bug Tracker pipeline failed. Check the console output above for the exact error."
+            echo "Bug Tracker pipeline failed."
         }
     }
 }
