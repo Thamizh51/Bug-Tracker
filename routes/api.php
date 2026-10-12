@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\BugController;
+use App\Http\Controllers\TestCaseController;
 
 Route::post('/login', [LoginController::class, 'login']);
 
@@ -49,6 +50,42 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/projects/{project}', [
         ProjectController::class,
         'destroy',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Test Case Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/projects/{project}/test-cases', [
+        TestCaseController::class,
+        'index',
+    ]);
+
+    Route::post('/projects/{project}/create-test-case', [
+        TestCaseController::class,
+        'store',
+    ]);
+
+    Route::get('/test-cases/{testCase}', [
+        TestCaseController::class,
+        'show',
+    ]);
+
+    Route::put('/test-cases/{testCase}', [
+        TestCaseController::class,
+        'update',
+    ]);
+
+    Route::delete('/test-cases/{testCase}', [
+        TestCaseController::class,
+        'destroy',
+    ]);
+
+    Route::get('/test-cases/{testCase}/bugs', [
+        TestCaseController::class,
+        'bugs',
     ]);
 
     /*

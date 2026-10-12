@@ -46,7 +46,7 @@ class UserController extends Controller
             return $adminCheck;
         }
 
-        $users = User::whereIn('role', ['developer', 'tester'])
+        $users = User::whereIn('role', ['developer', 'tester','admin'])
             ->select([
                 'id',
                 'name',

@@ -12,6 +12,7 @@ class Bug extends Model
 
     protected $fillable = [
         'project_id',
+        'test_case_id',
         'reported_by',
         'assigned_to',
         'assigned_team',
@@ -49,6 +50,11 @@ class Bug extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function testCase()
+    {
+        return $this->belongsTo(TestCase::class);
     }
 
     public function reporter()

@@ -39,4 +39,9 @@ class Project extends Model
     {
         return $this->hasMany(Bug::class);
     }
+
+    public function testCases()
+    {
+        return $this->hasMany(TestCase::class);
+    }
 }

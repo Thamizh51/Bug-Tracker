@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class BugController extends Controller
 {
@@ -20,6 +21,7 @@ class BugController extends Controller
         $bugs = $project->bugs()
             ->with([
                 'project',
+                'testCase',
                 'reporter',
             ])
             ->latest()
@@ -86,6 +88,12 @@ class BugController extends Controller
         }
 
         $validated = $request->validate([
+            'test_case_id' => [
+                'nullable',
+                'integer',
+                'exists:test_cases,id',
+            ],
+
             'assigned_to' => [
                 'nullable',
                 'integer',
@@ -167,6 +175,7 @@ class BugController extends Controller
 
         $bug = Bug::create([
             'project_id' => $project->id,
+            'test_case_id' => $validated['test_case_id'] ?? null,
             'reported_by' => $user->name,
 
             'assigned_to' => $assignedToName,
@@ -188,6 +197,7 @@ class BugController extends Controller
 
         $bug->load([
             'project',
+            'testCase',
             'reporter',
         ]);
 
@@ -204,66 +214,78 @@ class BugController extends Controller
      * Developer allowed statuses:
      * assigned, pending, in_progress, resolved
      */
-    public function updateStatus(Request $request, Bug $bug)
-    {
-        $user = Auth::user();
+public function updateStatus(Request $request, Bug $bug)
+{
+    $user = Auth::user();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated.',
-            ], 401);
-        }
-
-        if ($user->role !== 'developer') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only developers can update bug status.',
-            ], 403);
-        }
-
-        if ($bug->assigned_to !== $user->name) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This bug is not assigned to you.',
-            ], 403);
-        }
-
-        $validated = $request->validate([
-            'status' => [
-                'required',
-                Rule::in([
-                    'assigned',
-                    'pending',
-                    'in_progress',
-                    'resolved',
-                ]),
-            ],
-        ]);
-
-        $newStatus = $validated['status'];
-
-        $bug->status = $newStatus;
-
-        if ($newStatus === 'resolved') {
-            $bug->resolved_at = now();
-        } else {
-            $bug->resolved_at = null;
-        }
-
-        $bug->save();
-
-        $bug->load([
-            'project',
-            'reporter',
-        ]);
-
+    if (!$user) {
         return response()->json([
-            'success' => true,
-            'message' => 'Bug status updated successfully.',
-            'bug' => $bug,
-        ], 200);
+            'success' => false,
+            'message' => 'Unauthenticated.',
+        ], 401);
     }
+
+    if ($user->role !== 'developer') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Only developers can update bug status.',
+        ], 403);
+    }
+
+    if ($bug->assigned_to !== $user->name) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This bug is not assigned to you.',
+        ], 403);
+    }
+
+    $validated = $request->validate([
+        'status' => [
+            'required',
+            Rule::in([
+                'assigned',
+                'pending',
+                'in_progress',
+                'resolved',
+            ]),
+        ],
+    ]);
+
+    $oldStatus = $bug->status;
+    $newStatus = $validated['status'];
+
+    $bug->status = $newStatus;
+
+    if ($newStatus === 'resolved') {
+        $bug->resolved_at = now();
+    } else {
+        $bug->resolved_at = null;
+    }
+
+    $bug->save();
+
+    // Log the bug status change
+    Log::info('Bug status updated', [
+        'bug_id' => $bug->id,
+        'bug_title' => $bug->title,
+        'developer_id' => $user->id,
+        'developer_name' => $user->name,
+        'old_status' => $oldStatus,
+        'new_status' => $newStatus,
+        'updated_at' => now()->toDateTimeString(),
+    ]);
+
+    $bug->load([
+        'project',
+        'reporter',
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Bug status updated successfully.',
+        'bug' => $bug,
+    ], 200);
+}
 
     /**
      * Tester retests a resolved bug.
@@ -355,6 +377,7 @@ class BugController extends Controller
         $bugs = Bug::where('assigned_to', $user->name)
             ->with([
                 'project:id,name',
+                'testCase:id,title,test_case_code',
                 'reporter:id,name,email',
             ])
             ->latest()
@@ -572,6 +595,7 @@ class BugController extends Controller
     {
         $bug->load([
             'project',
+            'testCase',
             'reporter',
         ]);
 

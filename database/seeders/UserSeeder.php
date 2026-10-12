@@ -11,48 +11,69 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Admin
-        User::create([
-            'name' => 'Admin',
-            'email' => 'admin@bugtracker.com',
-            'password' => Hash::make('password123'),
-            'role' => 'admin',
-            'department' => null,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@bugtracker.com'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+                'department' => null,
+            ]
+        );
 
         // Backend Developer - Mohan
-        User::create([
-            'name' => 'Mohan',
-            'email' => 'mohan@bugtracker.com',
-            'password' => Hash::make('password123'),
-            'role' => 'developer',
-            'department' => 'backend',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'mohan@bugtracker.com'],
+            [
+                'name' => 'Mohan',
+                'password' => Hash::make('password123'),
+                'role' => 'developer',
+                'department' => 'backend',
+            ]
+        );
 
         // Backend Developer - Selvam
-        User::create([
-            'name' => 'Selvam',
-            'email' => 'selvam@bugtracker.com',
-            'password' => Hash::make('password123'),
-            'role' => 'developer',
-            'department' => 'backend',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'selvam@bugtracker.com'],
+            [
+                'name' => 'Selvam',
+                'password' => Hash::make('password123'),
+                'role' => 'developer',
+                'department' => 'backend',
+            ]
+        );
 
         // Frontend Developer - Murali
-        User::create([
-            'name' => 'Murali',
-            'email' => 'murali@bugtracker.com',
-            'password' => Hash::make('password123'),
-            'role' => 'developer',
-            'department' => 'frontend',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'murali@bugtracker.com'],
+            [
+                'name' => 'Murali',
+                'password' => Hash::make('password123'),
+                'role' => 'developer',
+                'department' => 'frontend',
+            ]
+        );
 
         // Frontend Developer - Seetha
-        User::create([
-            'name' => 'Seetha',
-            'email' => 'seetha@bugtracker.com',
-            'password' => Hash::make('password123'),
-            'role' => 'developer',
-            'department' => 'frontend',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'seetha@bugtracker.com'],
+            [
+                'name' => 'Seetha',
+                'password' => Hash::make('password123'),
+                'role' => 'developer',
+                'department' => 'frontend',
+            ]
+        );
+
+        // QA Tester - Tester
+        User::firstOrCreate(
+            ['email' => 'tester@bugtracker.com'],
+            [
+                'name' => 'Tester',
+                'password' => Hash::make('password123'),
+                'role' => 'tester',
+                'department' => null,
+            ]
+        );
     }
 }
