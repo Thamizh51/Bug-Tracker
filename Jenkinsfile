@@ -2,63 +2,90 @@ pipeline {
     agent any
 
     environment {
-        // Allows Composer to run as root if your Jenkins agent requires it
-        COMPOSER_ALLOW_SUPERUSER = '1'
+        COMPOSE_PROJECT_NAME = 'bug-tracker'
+        APP_URL = 'http://localhost:8000'
     }
 
     stages {
-        stage('Check PHP and Composer') {
+        stage('Checkout') {
             steps {
-                sh 'php -v'
-                sh 'composer --version'
+                checkout scm
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Check Docker') {
             steps {
-                sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
+                sh 'docker --version'
+                sh 'docker compose version'
             }
         }
 
-        stage('Prepare Laravel') {
+        stage('Validate Docker Compose') {
             steps {
-                // Copy environment file and generate application key
-                sh 'cp .env.example .env'
-                sh 'php artisan key:generate'
+                sh 'docker compose config --quiet'
             }
         }
 
-        stage('Build Laravel Cache') {
+        stage('Build Docker Image') {
             steps {
-                sh 'php artisan config:cache'
-                sh 'php artisan route:cache'
+                sh 'docker compose build app'
             }
         }
 
-        stage('Run Tests') {
+        stage('Start Containers') {
             steps {
-                sh 'php artisan test'
+                sh 'docker compose up -d'
             }
         }
 
-        stage('Start Application') {
+        stage('Wait for Containers') {
             steps {
-                // Stop any existing server instance running on port 8000
-                sh 'fuser -k 8000/tcp || true'
-                
-                // JENKINS_NODE_COOKIE=dontKillMe keeps the server alive after the build finishes
-                sh 'JENKINS_NODE_COOKIE=dontKillMe nohup php artisan serve --host=0.0.0.0 --port=8000 > storage/logs/server.log 2>&1 &'
-                echo "Laravel application started persistently on port 8000!"
+                sh '''
+                    for i in $(seq 1 30); do
+                        if docker compose ps --status running --services | grep -qx db; then
+                            echo "Database container is running."
+                            break
+                        fi
+
+                        if [ "$i" -eq 30 ]; then
+                            echo "Database container did not start."
+                            docker compose logs db
+                            exit 1
+                        fi
+
+                        sleep 2
+                    done
+                '''
+            }
+        }
+
+        stage('Run Laravel Migrations') {
+            steps {
+                sh 'docker compose exec -T app php artisan migrate --force'
+            }
+        }
+
+        stage('Verify Application') {
+            steps {
+                sh '''
+                    docker compose ps
+                    docker compose exec -T app php artisan --version
+                    docker compose logs --tail=50 app
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "Bug Tracker pipeline completed and app is running on port 8000!"
+            echo 'Bug Tracker Docker deployment completed successfully.'
+            echo 'Application URL: http://localhost:8000'
         }
+
         failure {
-            echo "Bug Tracker pipeline failed."
+            echo 'Bug Tracker pipeline failed. Checking Docker logs...'
+            sh 'docker compose ps || true'
+            sh 'docker compose logs --tail=100 || true'
         }
     }
 }
