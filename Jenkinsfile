@@ -4,9 +4,13 @@ pipeline {
     environment {
         COMPOSE_PROJECT_NAME = 'bug-tracker'
         APP_URL = 'http://localhost:8000'
+
+        DB_ROOT_PASSWORD = credentials('bug-tracker-db-root-password')
+        DB_PASSWORD = credentials('bug-tracker-db-password')
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -17,6 +21,31 @@ pipeline {
             steps {
                 sh 'docker --version'
                 sh 'docker compose version'
+            }
+        }
+
+        stage('Prepare Environment') {
+            steps {
+                sh '''
+                    set -eu
+
+                    if [ ! -f .env.example ]; then
+                        echo "ERROR: .env.example file not found!"
+                        exit 1
+                    fi
+
+                    cp .env.example .env
+
+                    # Remove existing password entries to avoid duplicates.
+                    sed -i '/^DB_ROOT_PASSWORD=/d' .env
+                    sed -i '/^DB_PASSWORD=/d' .env
+
+                    # Inject credentials supplied by Jenkins.
+                    printf '\\nDB_ROOT_PASSWORD=%s\\n' "$DB_ROOT_PASSWORD" >> .env
+                    printf 'DB_PASSWORD=%s\\n' "$DB_PASSWORD" >> .env
+
+                    echo ".env file prepared successfully."
+                '''
             }
         }
 
@@ -38,23 +67,26 @@ pipeline {
             }
         }
 
-        stage('Wait for Containers') {
+        stage('Wait for Database') {
             steps {
                 sh '''
-                    for i in $(seq 1 30); do
-                        if docker compose ps --status running --services | grep -qx db; then
-                            echo "Database container is running."
-                            break
+                    set -eu
+
+                    for i in $(seq 1 60); do
+                        if docker compose exec -T db \
+                            sh -c 'mysqladmin ping -h 127.0.0.1 --silent' \
+                            >/dev/null 2>&1; then
+                            echo "MySQL is ready."
+                            exit 0
                         fi
 
-                        if [ "$i" -eq 30 ]; then
-                            echo "Database container did not start."
-                            docker compose logs db
-                            exit 1
-                        fi
-
+                        echo "Waiting for MySQL... ($i/60)"
                         sleep 2
                     done
+
+                    echo "ERROR: MySQL did not become ready."
+                    docker compose logs --tail=100 db
+                    exit 1
                 '''
             }
         }
@@ -68,9 +100,16 @@ pipeline {
         stage('Verify Application') {
             steps {
                 sh '''
+                    set -eu
+
                     docker compose ps
                     docker compose exec -T app php artisan --version
-                    docker compose logs --tail=50 app
+
+                    # Check that Apache is serving the application.
+                    curl --fail --silent --show-error \
+                        --output /dev/null \
+                        --write-out 'HTTP status: %{http_code}\\n' \
+                        "$APP_URL"
                 '''
             }
         }
@@ -83,7 +122,8 @@ pipeline {
         }
 
         failure {
-            echo 'Bug Tracker pipeline failed. Checking Docker logs...'
+            echo 'Bug Tracker pipeline failed. Checking container status and logs.'
+
             sh 'docker compose ps || true'
             sh 'docker compose logs --tail=100 || true'
         }
