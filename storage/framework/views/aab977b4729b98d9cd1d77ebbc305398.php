@@ -25,4 +25,4 @@
         <button type="submit">Login</button>
     </form>
 </body>
-</html><?php /**PATH D:\Bug-Tracker\resources\views/Auth/login.blade.php ENDPATH**/ ?>
+</html><?php /**PATH /home/thamizh/Bug-Tracker/resources/views/Auth/login.blade.php ENDPATH**/ ?>
