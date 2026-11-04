@@ -1,51 +1,55 @@
-
 pipeline {
     agent any
 
-    stages {
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
+        disableConcurrentBuilds()
+    }
 
+    environment {
+        CI = 'true'
+    }
+
+    stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo 'Source code downloaded successfully'
             }
         }
 
-        stage('Branch Information') {
+        stage('Install PHP dependencies') {
             steps {
-                echo "Current Branch: ${env.BRANCH_NAME}"
+                sh 'composer install --no-interaction --prefer-dist --no-progress'
             }
         }
 
-        stage('Build') {
+        stage('Install frontend dependencies') {
             steps {
-                echo 'Building application...'
+                sh 'npm ci'
+            }
+        }
+
+        stage('Build frontend') {
+            steps {
+                sh 'npm run build'
             }
         }
 
         stage('Test') {
             steps {
-                echo 'Running application tests...'
-            }
-        }
-
-        stage('Deployment') {
-            when {
-                branch 'main'
-            }
-            steps {
-                echo 'Deploying production application...'
+                sh 'APP_KEY=base64:$(php -r \'echo base64_encode(random_bytes(32));\') composer test'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            echo 'Build and tests completed successfully.'
         }
 
         failure {
-            echo 'Pipeline failed!'
+            echo 'Build or tests failed.'
         }
 
         always {
