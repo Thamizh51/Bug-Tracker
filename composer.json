@@ -33,6 +33,11 @@
         }
     },
     "scripts": {
+        "test": [
+        "@php artisan config:clear --ansi",
+        "@php artisan migrate:fresh --env=testing --ansi",
+        "@php artisan test"
+    ],
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
